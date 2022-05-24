@@ -18,6 +18,8 @@ function find() {
       }
     ]
    */
+
+  return db('users').select('user_id', 'username');
 }
 
 function findBy(filter) {
@@ -34,6 +36,7 @@ function findBy(filter) {
       }
     ]
    */
+  return db('users').where(filter);
 }
 
 function findById(user_id) {
@@ -47,6 +50,9 @@ function findById(user_id) {
       "role_name": "instructor"
     }
    */
+    return db('users')
+    .where({ user_id })
+    .first();
 }
 
 /**
