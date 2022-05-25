@@ -3,7 +3,7 @@ const Users = require('../users/users-model');
 
 const { JWT_SECRET } = require("../secrets"); // use this secret!
 
-const restricted = (req, res, next) => {
+const restricted = async (req, res, next) => {
   /*
     If the user does not provide a token in the Authorization header:
     status 401
@@ -19,23 +19,37 @@ const restricted = (req, res, next) => {
 
     Put the decoded token in the req object, to make life easier for middlewares downstream!
   */
-    const token = req.headers.authorization;
+    // const token = req.headers.authorization;
   
-    if (token == null) {
-      next({ status: 401, message: 'token required'})
+    // if (token == null) {
+    //   next({ status: 401, message: 'token required'})
+    //   return;
+    // }
+  
+    // jwt.verify(token, JWT_SECRET, (err, decodedToken) => {
+    //   if (err) {
+    //     next({ status: 401, message: 'token invalid'});
+    //     return;
+    //   }
+  
+    //   req.decodedJwt = decodedToken;
+    //   console.log(req.decodedJwt);
+    //   next()
+    // })
+    if (req.headers.authorization == null) {
+      next({status: 401, message: "token required!"})
       return;
     }
-  
-    jwt.verify(token, JWT_SECRET, (err, decodedToken) => {
-      if (err) {
-        next({ status: 401, message: 'token invalid'});
-        return;
-      }
-  
-      req.decodedJwt = decodedToken;
-      console.log(req.decodedToken);
-      next()
-    })
+
+    try {
+      req.decodedJWT = await jwt.verify(req.headers.authorization, JWT_SECRET);
+    } catch(err) {
+      next({ status: 401, message: "token invalid"})
+      return;
+    }
+
+    next()
+
 }
 
 const only = role_name => (req, res, next) => {
@@ -49,6 +63,20 @@ const only = role_name => (req, res, next) => {
 
     Pull the decoded token from the req object, to avoid verifying it again!
   */
+
+    if (!req.decodedJWT == null) {
+      next({ status: 500, message: "internal server error"});
+      return;
+    }
+
+
+    if (req.decodedJWT.role_name != 'admin') {
+      next({ status: 403, message: 'this is not for you'})
+      return;
+    }
+
+    next();
+
 }
 
 
@@ -65,7 +93,7 @@ const checkUsernameExists = (req, res, next) => {
     Users.findBy({username}).first()
         .then( userFound => {
             if (!userFound) {
-                next({status: 401, message: 'credentials invalid'})
+                next({status: 401, message: 'invalid credentials'})
                 return;
             }
             req.body.user = userFound;
@@ -95,24 +123,40 @@ const validateRoleName = (req, res, next) => {
     }
   */
 
-  const role = req.body.role_name.trim();
+    
+  if (!req.body.role_name || req.body.role_name == null) {
+      req.body.role_name = 'student';
+      // next();
+      // return;
+  }
+
+  req.body.role_name = req.body.role_name.trim();
+
+  let role = req.body.role_name;
+
+  console.log(role)
 
   if (role == "admin") {
+    console.log(role)
     next({ status: 422, message: 'Role name can not be admin'});
     return;
   }
 
   if (role.length > 32) {
-    next({ status: 422, message: 'Role name can not be longer than 32 char'});
+    console.log(role)
+    next({ status: 422, message: 'can not be longer than 32 chars'});
     return;
   }
 
-  if (!role || role == " ") {
-    req.body.role_name = "student";
+  if (role == "") {
+    console.log(role)
+    role = "student";
     next()
     return;
+    
   }
 
+  console.log(role)
   req.body.role_name = role;
   next();
 }

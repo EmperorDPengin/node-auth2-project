@@ -25,7 +25,7 @@ router.post("/register", validateRoleName, async (req, res, next) => {
       const user = {username, password: hash, role_name};
 
       let savedUser = await Users.add(user);
-      res.status(201).json({message: 'Registered!', savedUser});
+      res.status(201).json(savedUser);
 
     }
     catch(err){
@@ -61,7 +61,7 @@ router.post("/login", checkUsernameExists, async (req, res, next) => {
     
       if(user && bc.compareSync(password, user.password)) {
         res.status(200).json({
-          message: `Welcome, ${user.username}`,
+          message: `${user.username} is back`,
           token: generateToken(user)
         })
       } else {
@@ -77,8 +77,10 @@ router.post("/login", checkUsernameExists, async (req, res, next) => {
 
 function generateToken(user){
   const payload = {
-    subject: user.id,
-    username: user.username
+    role_name: user.role_name,
+    username: user.username,
+    subject: user.user_id,
+    iat: new Date().getTime()
   };
   const options = { expiresIn: '1d'};
   return jwt.sign(payload, JWT_SECRET, options);
